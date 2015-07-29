@@ -46,7 +46,7 @@ openHotspot = (wifi, ssid, passphrase) ->
 	.delay(5000)
 	.then ->
 		execAsync 'modprobe bcm4334x op_mode=2'
-	.delay(3000)
+	.delay(5000)
 	.then ->
 		wifi.openHotspotAsync(ssid, passphrase)
 
@@ -55,10 +55,10 @@ closeHotspot = (wifi) ->
 	.delay(5000)
 	.then ->
 		execAsync 'modprobe -r bcm4334x'
-	.delay(3000)
+	.delay(5000)
 	.then ->
 		execAsync 'modprobe bcm4334x'
-	.delay(2000)
+	.delay(5000)
 
 
 startServer = (wifi) ->
