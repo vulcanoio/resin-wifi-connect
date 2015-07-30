@@ -1,4 +1,5 @@
 Promise = require('bluebird')
+retry = require('bluebird-retry')
 connman = Promise.promisifyAll(require('connman-simplified')())
 express = require('express')
 app = express()
@@ -8,6 +9,7 @@ spawn = require('child_process').spawn
 execAsync = Promise.promisify(require('child_process').exec)
 os = require('os')
 async = require('async')
+fs = Promise.promisifyAll(require('fs'))
 
 config = require('./wifi.json')
 ssid = process.env.PORTAL_SSID or config.ssid
@@ -17,6 +19,8 @@ port = process.env.PORTAL_PORT or config.port
 server = null
 ssidList = null
 dnsServer = null
+
+connectionFile = '/data/connection.json'
 
 ignore = ->
 
@@ -41,29 +45,69 @@ getIptablesRules = (callback) ->
 				rule: "TETHER -p udp --dport 53 -j DNAT --to-destination #{myIP}:53"
 		]
 
-openHotspot = (wifi, ssid, passphrase) ->
-	execAsync 'modprobe -r bcm4334x'
-	.delay(5000)
+reboot = ->
+	execAsync('sync')
 	.then ->
-		execAsync 'modprobe bcm4334x op_mode=2'
-	.delay(5000)
+		execAsync('dbus-send --print-reply --reply-timeout=2000 --type=method_call --system --dest=org.freedesktop.systemd1 /org/freedesktop/systemd1 org.freedesktop.systemd1.Manager.Reboot')
 	.then ->
-		wifi.openHotspotAsync(ssid, passphrase)
+		process.exit()
 
-closeHotspot = (wifi) ->
-	wifi.closeHotspotAsync()
-	.delay(5000)
+loadModuleForStation = ->
+	console.log("Removing bcm module")
+	return Promise.delay(5000)
 	.then ->
 		execAsync 'modprobe -r bcm4334x'
+	.catch(ignore)
 	.delay(5000)
 	.then ->
+		console.log("Reloading bcm module")
 		execAsync 'modprobe bcm4334x'
+	.catch(ignore)
 	.delay(5000)
 
+
+loadModuleForAP = (wifi) ->
+	console.log("Removing bcm module")
+	execAsync 'modprobe -r bcm4334x'
+	.catch(ignore)
+	.delay(5000)
+	.then ->
+		console.log("Reloading bcm module")
+		execAsync 'modprobe bcm4334x op_mode=2'
+	.catch(ignore)
+	.delay(5000)
+
+openHotspot = (wifi, ssid, passphrase) ->
+	loadModuleForAP(wifi)
+	.then ->
+		console.log("Opening hotspot")
+		wifi.openHotspotAsync(ssid, passphrase)
+	.catch (err) ->
+		console.log(err)
+
+closeHotspot = (wifi) ->
+	console.log("Closing hotspot")
+	wifi.closeHotspotAsync()
+	.then ->
+		loadModuleForStation(wifi)
+
+connectOrStartServer = (wifi, retryCallback) ->
+	fs.exists connectionFile, (exists) ->
+		if exists
+			conn = require(connectionFile)
+			wifi.joinWithAgentAsync(conn.ssid, conn.passphrase)
+			.then ->
+				console.log('Joined! Exiting.')
+				retryCallback()
+			.catch ->
+				startServer(wifi)
+		else
+			startServer(wifi)
 
 startServer = (wifi) ->
 	console.log('Getting networks list')
-	wifi.getNetworksAsync().then (list) ->
+	retry(wifi.getNetworksAsync, {max_tries: 3})
+	.then (list) ->
 		ssidList = list
 		openHotspot(wifi, ssid, passphrase)
 	.then ->
@@ -108,13 +152,10 @@ manageConnection = (retryCallback) ->
 			.then ->
 				dnsServer.kill()
 				console.log('Server closed and captive portal disabled')
-				wifi.joinWithAgentAsync(req.body.ssid, req.body.passphrase)
+				fs.writeFileAsync(connectionFile, JSON.stringify({ssid: req.body.ssid, passphrase: req.body.passphrase}))
 			.then ->
-				console.log('Joined! Exiting.')
-				retryCallback()
-			.catch (err) ->
-				console.log('Error joining network', err, err.stack)
-				return startServer(wifi)
+				console.log('Rebooting')
+				reboot()
 
 		app.use (req, res) ->
 			res.redirect('/')
@@ -135,8 +176,7 @@ manageConnection = (retryCallback) ->
 					console.log('Joined! Exiting.')
 					retryCallback()
 				.catch (err) ->
-					startServer(wifi)
-
+					connectOrStartServer(wifi, retryCallback)
 			else
 				console.log('Already connected')
 				retryCallback()
