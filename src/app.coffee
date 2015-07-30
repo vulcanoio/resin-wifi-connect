@@ -1,5 +1,4 @@
 Promise = require('bluebird')
-retry = require('bluebird-retry')
 connman = Promise.promisifyAll(require('connman-simplified')())
 express = require('express')
 app = express()
@@ -106,7 +105,7 @@ connectOrStartServer = (wifi, retryCallback) ->
 
 startServer = (wifi) ->
 	console.log('Getting networks list')
-	retry(wifi.getNetworksAsync, {max_tries: 3})
+	wifi.getNetworksAsync()
 	.then (list) ->
 		ssidList = list
 		openHotspot(wifi, ssid, passphrase)
