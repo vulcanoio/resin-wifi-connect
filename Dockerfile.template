@@ -8,11 +8,13 @@ RUN apt-get update && apt-get install -y \
 	libdbus-1-dev \
 	libexpat-dev \
 	net-tools \
+	udhcpd \
 	usbutils \
 	wireless-tools \
 	&& rm -rf /var/lib/apt/lists/*
 
 COPY ./assets/bind /etc/bind
+COPY ./assets/sbin /usr/sbin
 
 RUN mkdir -p /usr/src/app/
 WORKDIR /usr/src/app
