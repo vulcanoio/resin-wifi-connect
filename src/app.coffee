@@ -129,7 +129,7 @@ connectOrStartServer = (wifi, retryCallback) ->
 	fs.exists connectionFile, (exists) ->
 		if exists
 			conn = require(connectionFile)
-			wifi.joinWithAgentAsync(conn.ssid, conn.passphrase)
+			wifi.joinAsync(conn.ssid, conn.passphrase)
 			.then ->
 				console.log('Joined! Exiting.')
 				retryCallback()
