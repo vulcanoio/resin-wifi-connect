@@ -62,7 +62,7 @@ startServer = (wifi) ->
 		wifi.openHotspotAsync(ssid, passphrase)
 	.then ->
 		console.log('Hotspot enabled')
-		dnsServer = spawn('named', ['-g', '-d', '2'])
+		dnsServer = spawn('named', ['-g', '-d', '1'])
 		dnsServer.stdout.on('data', printNamedOutput)
 		dnsServer.stderr.on('data', printNamedOutput)
 		getIptablesRules (err, iptablesRules) ->
