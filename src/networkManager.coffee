@@ -26,12 +26,32 @@ exports.isSetup = () ->
 	new Promise (resolve, reject) ->
 		getConnections()
 		.then (connections) ->
-			if connections.length > DEFAULT_CONNECTIONS
-				resolve (true)
-			else 
-				resolve (false)
-		.catch (e) ->
-			reject (e)
+			buffer = []
+			for connection in connections
+				buffer.push(validateConnection(connection))
+				
+			Promise.all(buffer)
+			.then (result) -> 
+				if true in result
+					return true
+				return false
+
+getConnections = () ->
+	bus.getInterfaceAsync(SERVICE, WIFI_OBJECT, TECHNOLOGY_INTERFACE)
+	.then (manager) ->
+		manager.ListConnectionsAsync()
+
+getConnection = (connection) ->
+	bus.getInterfaceAsync(SERVICE, connection, TECHNOLOGY_INTERFACE + ".Connection")
+
+validateConnection = (connection) ->
+	getConnection(connection)
+	.then (connection) ->
+		console.log(connection.object.property)
+		if connection.object.property.Unsaved.type == 'c'
+			return true
+		return false
+
 
 exports.setCredentials = (ssid, passphrase) ->
 	data = """
@@ -101,8 +121,3 @@ exports.connect  = (timeout) ->
 				wifi.removeListener('PropertyChanged', handler)
 				reject()
 			, timeout
-
-getConnections = () ->
-	bus.getInterfaceAsync(SERVICE, WIFI_OBJECT, TECHNOLOGY_INTERFACE)
-	.then (manager) ->
-		manager.ListConnectionsAsync()
