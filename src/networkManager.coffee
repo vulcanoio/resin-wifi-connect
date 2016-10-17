@@ -57,23 +57,15 @@ exports.clearCredentials = ->
 exports.connect  = (timeout) ->
 	getDevices()
 	.then (devices) ->
-		console.log(devices)
 		buffer = []
 		for device in devices
 			buffer.push(validateDevice(device))
 		Promise.all(buffer)
 		.then (results) ->
-			console.log(results)
 			bus.getInterfaceAsync(SERVICE, '/org/freedesktop/NetworkManager', 'org.freedesktop.NetworkManager')
 			.then (manager) ->
-				console.log('yo')
-				console.log(devices[results.indexOf(true)])
 				manager.ActivateConnectionAsync('/', devices[results.indexOf(true)], '/')
-				.catch (e) ->
-					console.log('error')
-					console.log(e)
 				.then ->
-					console.log('yo1')
 					new Promise (resolve, reject) ->
 						handler = (value) ->
 							if value == NM_STATE_CONNECTED_GLOBAL
