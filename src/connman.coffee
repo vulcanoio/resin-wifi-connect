@@ -46,7 +46,7 @@ exports.setCredentials = (ssid, passphrase) ->
 	console.log('Saving connection')
 	console.log(connection)
 
-	utils.durableWriteFile(config.persistentConfig, data)
+	utils.durableWriteFile(config.persistentConfig, connection)
 
 exports.clearCredentials = ->
 	fs.unlinkAsync(config.persistentConfig)
