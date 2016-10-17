@@ -21,17 +21,12 @@ exports.stop = ->
 	systemd.stop('connman.service')
 
 exports.isSetup = ->
-	console.log('a')
 	fs.statAsync(config.persistentConfig)
 	.then (exists) ->
-		console.log('b')
-		if exists
-			console.log('y')
-			utils.copyFile(config.persistentConfig, config.connmanConfig)
-			.return(true)
-		else
-			console.log('n')
-			return false
+		utils.copyFile(config.persistentConfig, config.connmanConfig)
+		.return(true)
+	.catch (e) ->
+		return false
 
 exports.setCredentials = (ssid, passphrase) ->
 	connection = """
