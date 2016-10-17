@@ -62,6 +62,8 @@ exports.connect  = (timeout) ->
 			buffer.push(validateDevice(device))
 		Promise.all(buffer)
 		.then (results) ->
+			console.log(results)
+			console.log(devices)
 			bus.getInterfaceAsync(SERVICE, '/org/freedesktop/NetworkManager', 'org.freedesktop.NetworkManager')
 			.then (manager) ->
 				manager.ActivateConnectionAsync('/', devices[results.indexOf(true)], '/')
