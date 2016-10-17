@@ -22,13 +22,15 @@ exports.stop = ->
 
 exports.isSetup = ->
 	console.log('a')
-	fs.existsAsync(config.persistentConfig)
+	fs.statAsync(config.persistentConfig)
 	.then (exists) ->
 		console.log('b')
 		if exists
+			console.log('y')
 			utils.copyFile(config.persistentConfig, config.connmanConfig)
 			.return(true)
 		else
+			console.log('n')
 			return false
 
 exports.setCredentials = (ssid, passphrase) ->
