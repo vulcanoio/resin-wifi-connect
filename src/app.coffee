@@ -27,7 +27,6 @@ app.post '/connect', (req, res) ->
 	hotspot.stop(manager)
 	.then ->
 		manager.setCredentials(req.body.ssid, req.body.passphrase)
-	.delay(2000)
 	.then ->
 		run()
 

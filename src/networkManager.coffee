@@ -67,7 +67,6 @@ exports.connect  = (timeout) ->
 			bus.getInterfaceAsync(SERVICE, '/org/freedesktop/NetworkManager', 'org.freedesktop.NetworkManager')
 			.then (manager) ->
 				console.log('yo')
-				console.log(manager)
 				console.log(devices[results.indexOf(true)])
 				manager.ActivateConnectionAsync('/', devices[results.indexOf(true)], '/')
 				.catch (e) ->
