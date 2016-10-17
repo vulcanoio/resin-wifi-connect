@@ -25,7 +25,7 @@ exports.isSetup = ->
 	getConnections()
 	.map(validateConnection)
 	.then (results) ->
-    	return false in results
+		return false in results
 
 exports.setCredentials = (ssid, passphrase) ->
 	connection = {
@@ -118,6 +118,6 @@ getDevice = (device) ->
 
 validateDevice = (device) ->
 	getDevice(device)
-	.call('getPropertyAsync', 'DeviceType')	
+	.call('getPropertyAsync', 'DeviceType')
 	.then (property) ->
 		return property == NM_DEVICE_TYPE_WIFI
