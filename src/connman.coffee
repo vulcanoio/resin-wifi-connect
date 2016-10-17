@@ -21,8 +21,10 @@ exports.stop = ->
 	systemd.stop('connman.service')
 
 exports.isSetup = ->
+	console.log('a')
 	fs.existsAsync(config.persistentConfig)
 	.then (exists) ->
+		console.log('b')
 		if exists
 			utils.copyFile(config.persistentConfig, config.connmanConfig)
 			.return(true)
