@@ -38,7 +38,6 @@ app.use (req, res) ->
 	res.redirect('/')
 
 run = ->
-	console.log('run')
 	manager.isSetup()
 	.then (setup) ->
 		if setup
@@ -103,7 +102,6 @@ systemd.exists('NetworkManager.service')
 .then ->
 	wifiScan.scanAsync()
 .then (results) ->
-	console.log(results)
 	ssids = results
 .then ->
 	run()
