@@ -57,6 +57,7 @@ exports.clearCredentials = ->
 exports.connect  = (timeout) ->
 	getDevices()
 	.then (devices) ->
+		console.log(devices)
 		buffer = []
 		for device in devices
 			buffer.push(validateDevice(device))
@@ -67,6 +68,7 @@ exports.connect  = (timeout) ->
 			.then (manager) ->
 				console.log('yo')
 				console.log(manager)
+				console.log(devices[results.indexOf(true)])
 				manager.ActivateConnectionAsync('/', devices[results.indexOf(true)], '/')
 				.catch (e) ->
 					console.log('error')
