@@ -22,7 +22,7 @@ exports.stop = ->
 
 exports.isSetup = ->
 	fs.statAsync(config.persistentConfig)
-	.then (exists) ->
+	.then ->
 		utils.copyFile(config.persistentConfig, config.connmanConfig)
 		.return(true)
 	.catch (e) ->
