@@ -55,15 +55,18 @@ exports.clearCredentials = ->
 	.map(deleteConnection)
 
 exports.connect  = (timeout) ->
-	getDevices()
+	checkConnectivity()
+	.then (result) ->
+		if result
+			return true
+	.then ->
+		getDevices()
 	.then (devices) ->
 		buffer = []
 		for device in devices
 			buffer.push(validateDevice(device))
 		Promise.all(buffer)
 		.then (results) ->
-			console.log(results)
-			console.log(devices)
 			bus.getInterfaceAsync(SERVICE, '/org/freedesktop/NetworkManager', 'org.freedesktop.NetworkManager')
 			.then (manager) ->
 				manager.ActivateConnectionAsync('/', devices[results.indexOf(true)], '/')
@@ -79,11 +82,9 @@ exports.connect  = (timeout) ->
 
 						# But try to read in case we registered the event handler
 						# after is was already connected
-						manager.CheckConnectivityAsync()
-						.then (state) ->
-							if state == NM_CONNECTIVITY_FULL
-								manager.removeListener('StateChanged', handler)
-								resolve()
+						if checkConnectivity()
+							manager.removeListener('StateChanged', handler)
+							resolve()
 
 						setTimeout ->
 							manager.removeListener('StateChanged', handler)
@@ -123,3 +124,9 @@ validateDevice = (device) ->
 	.call('getPropertyAsync', 'DeviceType')	
 	.then (property) ->
 		return property == NM_DEVICE_TYPE_WIFI
+
+checkConnectivity = ->
+	bus.getInterfaceAsync(SERVICE, '/org/freedesktop/NetworkManager', 'org.freedesktop.NetworkManager')
+	.call('CheckConnectivityAsync')
+	.then (state) ->
+		return (state == NM_CONNECTIVITY_FULL)
