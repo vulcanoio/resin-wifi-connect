@@ -72,14 +72,13 @@ run = ->
 
 app.listen(80)
 
-retry = null
 if process.argv[2] == '--retry=true'
 	console.log('Retry enabled')
 	retry = true
 else if process.argv[2] == '--retry=false'
 	console.log('Retry disabled')
 	retry = false
-else if typeof(process.argv[2]) == 'undefined'
+else if not process.argv[2]?
 	console.log('No retry flag passed')
 	console.log('Retry disabled')
 	retry = false

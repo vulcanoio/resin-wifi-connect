@@ -8,7 +8,11 @@ bus = dbus.getBus('system')
 systemd = require './systemd'
 
 SERVICE = 'org.freedesktop.NetworkManager'
-WHITE_LIST = ['resin-vpn', 'eth0']
+WHITE_LIST = ['resin-vpn', 'eth0', 'docker0']
+
+NM_STATE_CONNECTED_GLOBAL = 70
+NM_DEVICE_TYPE_WIFI = 2
+NM_CONNECTIVITY_FULL = 5
 
 exports.start = ->
 	systemd.start('NetworkManager.service')
@@ -18,21 +22,14 @@ exports.stop = ->
 
 exports.isSetup = ->
 	getConnections()
-	.then (connections) ->
-		buffer = []
-		for connection in connections
-			buffer.push(validateConnection(connection))
-
-		Promise.all(buffer)
-		.then (results) ->
-			return true in results
+	.map(validateConnection)
+	.then (results) ->
+    	return false in results
 
 exports.setCredentials = (ssid, passphrase) ->
-	bus.getInterfaceAsync(SERVICE, '/org/freedesktop/NetworkManager/Settings', 'org.freedesktop.NetworkManager.Settings')
-	.then (manager) ->
-		connection = {
+	connection = {
 			'802-11-wireless': {
-				ssid: unpack(ssid)
+				ssid: _.invokeMap(ssid, 'charCodeAt')
 			},
 			connection: {
 				id: ssid,
@@ -45,97 +42,72 @@ exports.setCredentials = (ssid, passphrase) ->
 			}
 		}
 
+	bus.getInterfaceAsync(SERVICE, '/org/freedesktop/NetworkManager/Settings', 'org.freedesktop.NetworkManager.Settings')
+	.then (manager) ->
 		manager.AddConnectionAsync(connection)
 
 exports.clearCredentials = ->
 	getConnections()
-	.then (connections) ->
-		buffer = []
-		for connection in connections
-			buffer.push(deleteConnection(connection))
-
-		Promise.all(buffer)
+	.map(deleteConnection)
 
 exports.connect  = (timeout) ->
 	getDevices()
-	.then (devices) ->
-		buffer = []
-		for device in devices
-			buffer.push(validateDevice(device, 2))
-
-		_manager = null
-		Promise.all(buffer)
-		.then (result) ->
-			bus.getInterfaceAsync(SERVICE, '/org/freedesktop/NetworkManager', 'org.freedesktop.NetworkManager')
-			.then (manager) ->
-				_manager = manager
-				_manager.ActivateConnectionAsync('/', devices[result.indexOf(true)], '/')
+	.map(validateDevice)
+	.then (result) ->
+		bus.getInterfaceAsync(SERVICE, '/org/freedesktop/NetworkManager', 'org.freedesktop.NetworkManager')
+		.then (manager) ->
+			manager.ActivateConnectionAsync('/', devices[result.indexOf(true)], '/')
 			.then ->
-				new Promise (resolve, reject, onCancel) ->
+				new Promise (resolve, reject) ->
 					handler = (value) ->
-						if value == 70
-							_manager.removeListener('StateChanged', handler)
+						if value == NM_STATE_CONNECTED_GLOBAL
+							manager.removeListener('StateChanged', handler)
 							resolve()
 
-					_manager.on('StateChanged', handler)
+					manager.on('StateChanged', handler)
 
-					_manager.CheckConnectivityAsync()
+					manager.CheckConnectivityAsync()
 					.then (state) ->
-						if state == 5
-							_manager.removeListener('StateChanged', handler)
+						if state == NM_CONNECTIVITY_FULL
+							manager.removeListener('StateChanged', handler)
 							resolve()
 
 					setTimeout ->
-						_manager.removeListener('StateChanged', handler)
+						manager.removeListener('StateChanged', handler)
 						reject()
 					, timeout
 
 getConnections = ->
 	bus.getInterfaceAsync(SERVICE, '/org/freedesktop/NetworkManager/Settings', 'org.freedesktop.NetworkManager.Settings')
-	.then (settings) ->
-		settings.ListConnectionsAsync()
+	.call('ListConnectionsAsync')
 
 getConnection = (connection) ->
 	bus.getInterfaceAsync(SERVICE, connection, 'org.freedesktop.NetworkManager.Settings.Connection')
 
 validateConnection = (connection) ->
 	getConnection(connection)
-	.then (connection) ->
-		connection.GetSettingsAsync()
-		.then (settings) ->
-			return settings.connection.id in WHITE_LIST
+	.call('GetSettingsAsync')
+	.then (settings) ->
+		return settings.connection.id in WHITE_LIST
 
 deleteConnection = (connection) ->
-	_connection = null
 	getConnection(connection)
 	.then (connection) ->
-		_connection = connection
 		connection.GetSettingsAsync()
 		.then (settings) ->
 			if settings.connection.id not in WHITE_LIST
-				_connection.DeleteAsync()
+				connection.DeleteAsync()
 
 getDevices = ->
 	bus.getInterfaceAsync(SERVICE, '/org/freedesktop/NetworkManager', 'org.freedesktop.NetworkManager')
-	.then (manager) ->
-		manager.GetDevicesAsync()
+	.call('GetDevicesAsync')
 
 getDevice = (device) ->
 	bus.getInterfaceAsync(SERVICE, device, 'org.freedesktop.NetworkManager.Device')
 
-validateDevice = (device, type) ->
+validateDevice = (device) ->
 	getDevice(device)
-	.then (device) ->
-		device.getPropertyAsync('DeviceType')
-		.then (property) ->
-			return property == type
-
-unpack = (str) ->
-	bytes = []
-	i = 0
-	n = str.length
-	while i < n
-		char = str.charCodeAt(i)
-		bytes.push(char)
-		i++
-	return bytes
+	.call('getPropertyAsync', 'DeviceType')	
+	.then (property) ->
+		return property == NM_DEVICE_TYPE_WIFI
+		

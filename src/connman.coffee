@@ -25,24 +25,23 @@ exports.isSetup = ->
 	.then (exists) ->
 		if exists
 			utils.copyFile(config.persistentConfig, config.connmanConfig)
-			.then ->
-				return true
+			.return(true)
 		else
 			return false
 
 exports.setCredentials = (ssid, passphrase) ->
 	data = """
-				[service_home_ethernet]
-				Type = ethernet
-				Nameservers = 8.8.8.8,8.8.4.4
+		[service_home_ethernet]
+		Type = ethernet
+		Nameservers = 8.8.8.8,8.8.4.4
 
-				[service_home_wifi]
-				Type = wifi
-				Name = #{ssid}
-				Passphrase = #{passphrase}
-				Nameservers = 8.8.8.8,8.8.4.4
+		[service_home_wifi]
+		Type = wifi
+		Name = #{ssid}
+		Passphrase = #{passphrase}
+		Nameservers = 8.8.8.8,8.8.4.4
 
-			"""
+	"""
 
 	console.log('Saving credentials')
 	console.log(data)
@@ -55,7 +54,7 @@ exports.clearCredentials = ->
 exports.connect  = (timeout) ->
 	bus.getInterfaceAsync(SERVICE, WIFI_OBJECT, TECHNOLOGY_INTERFACE)
 	.then (wifi) ->
-		new Promise (resolve, reject, onCancel) ->
+		new Promise (resolve, reject) ->
 			handler = (name, value) ->
 				if name is 'Connected' and value is true
 					wifi.removeListener('PropertyChanged', handler)
