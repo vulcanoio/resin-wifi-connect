@@ -29,6 +29,10 @@ app.post '/connect', (req, res) ->
 		manager.setCredentials(req.body.ssid, req.body.passphrase)
 	.then ->
 		run()
+	.catch (e) ->
+		console.log(e)
+		console.log('Exiting')
+		process.exit()
 
 app.use (req, res) ->
 	res.redirect('/')
