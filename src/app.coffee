@@ -31,7 +31,7 @@ app.post '/connect', (req, res) ->
 		run()
 	.catch (e) ->
 		console.log(e)
-		console.log('Exiting')
+		console.log('Exiting1')
 		process.exit()
 
 app.use (req, res) ->
