@@ -1,5 +1,6 @@
 Promise = require 'bluebird'
 DBus = require './dbus-promise'
+_ = require 'lodash'
 
 dbus = new DBus()
 
@@ -8,7 +9,7 @@ bus = dbus.getBus('system')
 systemd = require './systemd'
 
 SERVICE = 'org.freedesktop.NetworkManager'
-WHITE_LIST = ['resin-vpn', 'eth0', 'docker0']
+WHITE_LIST = ['resin-vpn', 'eth0']
 
 NM_STATE_CONNECTED_GLOBAL = 70
 NM_DEVICE_TYPE_WIFI = 2
@@ -28,23 +29,26 @@ exports.isSetup = ->
 
 exports.setCredentials = (ssid, passphrase) ->
 	connection = {
-			'802-11-wireless': {
-				ssid: _.invokeMap(ssid, 'charCodeAt')
-			},
-			connection: {
-				id: ssid,
-				type: '802-11-wireless',
-			},
-			'802-11-wireless-security': {
-				'auth-alg': 'open',
-				'key-mgmt': 'wpa-psk',
-				'psk': passphrase,
-			}
+		'802-11-wireless': {
+			ssid: _.invokeMap(ssid, 'charCodeAt')
+		},
+		connection: {
+			id: ssid,
+			type: '802-11-wireless',
+		},
+		'802-11-wireless-security': {
+			'auth-alg': 'open',
+			'key-mgmt': 'wpa-psk',
+			'psk': passphrase,
 		}
+	}
+
+	console.log('Saving connection')
+	console.log(connection)
 
 	bus.getInterfaceAsync(SERVICE, '/org/freedesktop/NetworkManager/Settings', 'org.freedesktop.NetworkManager.Settings')
-	.then (manager) ->
-		manager.AddConnectionAsync(connection)
+	.then (settings) ->
+		settings.AddConnectionAsync(connection)
 
 exports.clearCredentials = ->
 	getConnections()
@@ -52,30 +56,37 @@ exports.clearCredentials = ->
 
 exports.connect  = (timeout) ->
 	getDevices()
-	.map(validateDevice)
-	.then (result) ->
-		bus.getInterfaceAsync(SERVICE, '/org/freedesktop/NetworkManager', 'org.freedesktop.NetworkManager')
-		.then (manager) ->
-			manager.ActivateConnectionAsync('/', devices[result.indexOf(true)], '/')
-			.then ->
-				new Promise (resolve, reject) ->
-					handler = (value) ->
-						if value == NM_STATE_CONNECTED_GLOBAL
+	.then (devices) ->
+		buffer = []
+		for device in devices
+			buffer.push(validateDevice(device))
+		Promise.all(buffer)
+		.then (results) ->
+			bus.getInterfaceAsync(SERVICE, '/org/freedesktop/NetworkManager', 'org.freedesktop.NetworkManager')
+			.then (manager) ->
+				manager.ActivateConnectionAsync('/', devices[results.indexOf(true)], '/')
+				.then ->
+					new Promise (resolve, reject) ->
+						handler = (value) ->
+							if value == NM_STATE_CONNECTED_GLOBAL
+								manager.removeListener('StateChanged', handler)
+								resolve()
+
+						# Listen for 'Connected' signals
+						manager.on('StateChanged', handler)
+
+						# But try to read in case we registered the event handler
+						# after is was already connected
+						manager.CheckConnectivityAsync()
+						.then (state) ->
+							if state == NM_CONNECTIVITY_FULL
+								manager.removeListener('StateChanged', handler)
+								resolve()
+
+						setTimeout ->
 							manager.removeListener('StateChanged', handler)
-							resolve()
-
-					manager.on('StateChanged', handler)
-
-					manager.CheckConnectivityAsync()
-					.then (state) ->
-						if state == NM_CONNECTIVITY_FULL
-							manager.removeListener('StateChanged', handler)
-							resolve()
-
-					setTimeout ->
-						manager.removeListener('StateChanged', handler)
-						reject()
-					, timeout
+							reject()
+						, timeout
 
 getConnections = ->
 	bus.getInterfaceAsync(SERVICE, '/org/freedesktop/NetworkManager/Settings', 'org.freedesktop.NetworkManager.Settings')
@@ -110,4 +121,3 @@ validateDevice = (device) ->
 	.call('getPropertyAsync', 'DeviceType')	
 	.then (property) ->
 		return property == NM_DEVICE_TYPE_WIFI
-		

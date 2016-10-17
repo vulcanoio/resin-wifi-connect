@@ -30,7 +30,7 @@ exports.isSetup = ->
 			return false
 
 exports.setCredentials = (ssid, passphrase) ->
-	data = """
+	connection = """
 		[service_home_ethernet]
 		Type = ethernet
 		Nameservers = 8.8.8.8,8.8.4.4
@@ -43,8 +43,8 @@ exports.setCredentials = (ssid, passphrase) ->
 
 	"""
 
-	console.log('Saving credentials')
-	console.log(data)
+	console.log('Saving connection')
+	console.log(connection)
 
 	utils.durableWriteFile(config.persistentConfig, data)
 
@@ -63,8 +63,8 @@ exports.connect  = (timeout) ->
 			# Listen for 'Connected' signals
 			wifi.on('PropertyChanged', handler)
 
-			# # But try to read in case we registered the event handler
-			# # after is was already connected
+			# But try to read in case we registered the event handler
+			# after is was already connected
 			wifi.GetPropertiesAsync()
 			.then ({ Connected }) ->
 				if Connected
