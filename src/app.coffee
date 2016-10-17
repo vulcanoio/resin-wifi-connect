@@ -13,10 +13,10 @@ app.use(bodyParser.json())
 app.use(bodyParser.urlencoded(extended: true))
 app.use(express.static(__dirname + '/public'))
 
-_ssids = []
+ssids = []
 
 app.get '/ssids', (req, res) ->
-	res.json(_ssids)
+	res.json(ssids)
 
 app.post '/connect', (req, res) ->
 	if not (req.body.ssid? and req.body.passphrase?)
@@ -97,8 +97,8 @@ systemd.exists('NetworkManager.service')
 		manager = connman
 .then ->
 	wifiScan.scanAsync()
-.then (ssids) ->
-	_ssids = ssids
+.then (results) ->
+	ssids = results
 .then ->
 	run()
 .catch (e) ->
