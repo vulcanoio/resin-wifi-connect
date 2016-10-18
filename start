@@ -4,12 +4,11 @@ export DBUS_SYSTEM_BUS_ADDRESS=unix:path=/host/run/dbus/system_bus_socket
 
 # Run with --retry=true if you would like resin-wifi-connect to continue running
 # if either; the access point isn't present or the credentials are invalid
-# cd src && node app.js --retry=true
+# npm start -- --retry=true
 
 # Run with --retry=false if you would like resin-wifi-connect to exit
 # if either; the access point isn't present or the credentials are invalid
-cd src && node app.js --retry=false
-
+npm start -- --retry=false
 
 while true; do
 	sleep 100;

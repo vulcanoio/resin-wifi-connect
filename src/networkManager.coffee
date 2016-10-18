@@ -56,37 +56,36 @@ exports.clearCredentials = ->
 
 exports.connect  = (timeout) ->
 	getDevices()
-	.then (devices) ->
-		buffer = []
-		for device in devices
-			buffer.push(validateDevice(device))
-		Promise.all(buffer)
-		.then (results) ->
-			bus.getInterfaceAsync(SERVICE, '/org/freedesktop/NetworkManager', 'org.freedesktop.NetworkManager')
-			.then (manager) ->
-				manager.ActivateConnectionAsync('/', devices[results.indexOf(true)], '/')
-				.then ->
-					new Promise (resolve, reject) ->
-						handler = (value) ->
-							if value == NM_STATE_CONNECTED_GLOBAL
-								manager.removeListener('StateChanged', handler)
-								resolve()
-
-						# Listen for 'Connected' signals
-						manager.on('StateChanged', handler)
-
-						# But try to read in case we registered the event handler
-						# after is was already connected
-						manager.CheckConnectivityAsync()
-						.then (state) ->
-							if state == NM_CONNECTIVITY_FULL
-								manager.removeListener('StateChanged', handler)
-								resolve()
-
-						setTimeout ->
+	.filter (device) ->
+		validateDevice(device)
+	.then (validDevices) ->
+		if validDevices.length is 0
+			reject()
+		bus.getInterfaceAsync(SERVICE, '/org/freedesktop/NetworkManager', 'org.freedesktop.NetworkManager')
+		.then (manager) ->
+			manager.ActivateConnectionAsync('/', validDevices[0], '/')
+			.then ->
+				new Promise (resolve, reject) ->
+					handler = (value) ->
+						if value == NM_STATE_CONNECTED_GLOBAL
 							manager.removeListener('StateChanged', handler)
-							reject()
-						, timeout
+							resolve()
+
+					# Listen for 'Connected' signals
+					manager.on('StateChanged', handler)
+
+					# But try to read in case we registered the event handler
+					# after is was already connected
+					manager.CheckConnectivityAsync()
+					.then (state) ->
+						if state == NM_CONNECTIVITY_FULL
+							manager.removeListener('StateChanged', handler)
+							resolve()
+
+					setTimeout ->
+						manager.removeListener('StateChanged', handler)
+						reject()
+					, timeout
 
 getConnections = ->
 	bus.getInterfaceAsync(SERVICE, '/org/freedesktop/NetworkManager/Settings', 'org.freedesktop.NetworkManager.Settings')
