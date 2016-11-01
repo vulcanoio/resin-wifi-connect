@@ -9,6 +9,9 @@ bus = dbus.getBus('system')
 systemd = require './systemd'
 
 SERVICE = 'org.freedesktop.NetworkManager'
+
+# This allows us to say, if there IS a connection other than resin-vpn and eth0 then network manager has been set up previously.
+# If there IS NOT any other connections then network manager has not been set up previously.
 WHITE_LIST = ['resin-vpn', 'eth0']
 
 NM_STATE_CONNECTED_GLOBAL = 70
@@ -60,7 +63,7 @@ exports.connect  = (timeout) ->
 		validateDevice(device)
 	.then (validDevices) ->
 		if validDevices.length is 0
-			reject()
+			throw ("No valid devices found.")
 		bus.getInterfaceAsync(SERVICE, '/org/freedesktop/NetworkManager', 'org.freedesktop.NetworkManager')
 		.then (manager) ->
 			manager.ActivateConnectionAsync('/', validDevices[0], '/')
