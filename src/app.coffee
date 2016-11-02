@@ -68,7 +68,11 @@ run = ->
 					process.exit()
 		else
 			console.log('Credentials not found')
-			hotspot.start(manager)
+			.then ->
+				wifiScan.scanAsync()
+			.then (results) ->
+				ssids = results
+				hotspot.start(manager)
 			.catch (e) ->
 				console.log(e)
 				console.log('Exiting')
@@ -99,10 +103,6 @@ systemd.exists('NetworkManager.service')
 	else
 		console.log('Using connman.service')
 		manager = connman
-.then ->
-	wifiScan.scanAsync()
-.then (results) ->
-	ssids = results
 .then ->
 	run()
 .catch (e) ->
