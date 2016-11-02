@@ -10,8 +10,8 @@ systemd = require './systemd'
 
 SERVICE = 'org.freedesktop.NetworkManager'
 
-# This allows us to say, if there IS a connection other than resin-vpn and eth0 then network manager has been set up previously.
-# If there IS NOT any other connections then network manager has not been set up previously.
+# This allows us to say, if there IS a connection NAME other than resin-vpn and eth0 then network manager has been set up previously.
+# If there IS NOT any other connection NAME then network manager has not been set up previously.
 WHITE_LIST = ['resin-vpn', 'eth0']
 
 NM_STATE_CONNECTED_GLOBAL = 70
@@ -28,7 +28,7 @@ exports.isSetup = ->
 	getConnections()
 	.map(validateConnection)
 	.then (results) ->
-		return false in results
+		return true in results
 
 exports.setCredentials = (ssid, passphrase) ->
 	connection = {
@@ -101,7 +101,7 @@ validateConnection = (connection) ->
 	getConnection(connection)
 	.call('GetSettingsAsync')
 	.then (settings) ->
-		return settings.connection.id in WHITE_LIST
+		return settings.connection.id not in WHITE_LIST
 
 deleteConnection = (connection) ->
 	getConnection(connection)
